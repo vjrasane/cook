@@ -1,0 +1,14 @@
+.
+.vscode
+.pytest_cache
+node_modules/
+.env
+*.env
+
+.devenv/
+.direnv/
+.devenv.flake.nix
+
+# Build artifacts
+*.d.ts
+*.js
