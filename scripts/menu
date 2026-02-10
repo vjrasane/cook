@@ -3,23 +3,25 @@
 #
 # Usage:
 #   menu search <tag> [tag...]
-#   menu pick <count> <tag> [tag...]
-#   menu result
-#   menu reset
+#   menu pick <count> [tag...]
+#   menu list
+#   menu shop
+#   menu clear
 #
 # Example:
 #   source scripts/menu
 #   menu pick 2 fish "main course"
 #   menu pick 1 vegetarian "main course"
-#   menu pick 4 "main course"
-#   menu result
+#   menu pick 4
+#   menu list
+#   menu shop
 
 menu-search() {
   local result
-  result=$(cook search "$1" | sort)
+  result=$(cook search "$1" | sed 's/^"//;s/"$//' | sort)
   shift
   for tag in "$@"; do
-    result=$(comm -12 <(echo "$result") <(cook search "$tag" | sort))
+    result=$(comm -12 <(echo "$result") <(cook search "$tag" | sed 's/^"//;s/"$//' | sort))
   done
   echo "$result"
 }
@@ -31,7 +33,7 @@ menu-pick() {
   if [ $# -gt 0 ]; then
     candidates=$(menu-search "$@")
   else
-    candidates=$(cook search "" | sort)
+    candidates=$(cook search "" | sed 's/^"//;s/"$//' | sort)
   fi
   if [ -n "$_MENU_PICKED" ]; then
     candidates=$(echo "$candidates" | grep -v -F -f <(echo "$_MENU_PICKED"))
@@ -41,11 +43,28 @@ menu-pick() {
     _MENU_PICKED="${_MENU_PICKED:+$_MENU_PICKED
 }$new"
   fi
-  [ "$MENU_VERBOSE" = "true" ] && echo "$new" || true
+  echo "$new"
 }
 
 menu-list() {
   echo "$_MENU_PICKED" | grep -v '^$'
+}
+
+menu-shop() {
+  local input
+  if [ ! -t 0 ]; then
+    input=$(cat)
+  else
+    input=$(menu-list)
+  fi
+  local recipes=()
+  while IFS= read -r line; do
+    recipes+=("$line")
+  done <<<"$input"
+  cook shopping-list "$@" "${recipes[@]}"
+}
+
+menu-clear() {
   _MENU_PICKED=""
 }
 
@@ -56,8 +75,11 @@ menu() {
   search) menu-search "$@" ;;
   pick) menu-pick "$@" ;;
   list) menu-list ;;
+  shop) menu-shop "$@" ;;
+
+  clear) menu-clear ;;
   *)
-    echo "usage: menu search|pick|list" >&2
+    echo "usage: menu search|pick|list|shop|clear" >&2
     return 1
     ;;
   esac
