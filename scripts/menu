@@ -41,7 +41,7 @@ menu-pick() {
     _MENU_PICKED="${_MENU_PICKED:+$_MENU_PICKED
 }$new"
   fi
-  echo "$new"
+  [ "$MENU_VERBOSE" = "true" ] && echo "$new" || true
 }
 
 menu-list() {

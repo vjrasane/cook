@@ -6,6 +6,10 @@
 {
   dotenv.enable = true;
 
+  env = {
+    MENU_VERBOSE = "true";
+  };
+
   packages = with pkgs; [
     cook-cli
   ];
