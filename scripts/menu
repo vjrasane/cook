@@ -19,80 +19,82 @@
 _MENU_PICKED=""
 
 menu_search() {
-	_tmp1=$(mktemp)
-	_tmp2=$(mktemp)
-	cook search "$1" | sed 's/^"//;s/"$//' | sort >"$_tmp1"
-	shift
-	for tag in "$@"; do
-		cook search "$tag" | sed 's/^"//;s/"$//' | sort >"$_tmp2"
-		comm -12 "$_tmp1" "$_tmp2" >"$_tmp1.new"
-		mv "$_tmp1.new" "$_tmp1"
-	done
-	cat "$_tmp1"
-	rm -f "$_tmp1" "$_tmp2"
+  _tmp1=$(mktemp)
+  _tmp2=$(mktemp)
+  cook search "$1" | sed 's/^"//;s/"$//' | sort >"$_tmp1"
+  shift
+  for tag in "$@"; do
+    cook search "$tag" | sed 's/^"//;s/"$//' | sort >"$_tmp2"
+    comm -12 "$_tmp1" "$_tmp2" >"$_tmp1.new"
+    mv "$_tmp1.new" "$_tmp1"
+  done
+  cat "$_tmp1"
+  rm -f "$_tmp1" "$_tmp2"
 }
 
 menu_pick() {
-	_count=$1
-	shift
-	if [ $# -gt 0 ]; then
-		_candidates=$(menu_search "$@")
-	else
-		_candidates=$(cook search "" | sed 's/^"//;s/"$//' | sort)
-	fi
-	if [ -n "$_MENU_PICKED" ]; then
-		_tmp=$(mktemp)
-		printf '%s\n' "$_MENU_PICKED" >"$_tmp"
-		_candidates=$(printf '%s\n' "$_candidates" | grep -v -F -f "$_tmp")
-		rm -f "$_tmp"
-	fi
-	_new=$(printf '%s\n' "$_candidates" | awk 'BEGIN{srand()} NF{print rand()"\t"$0}' | sort -n | cut -f2- | head -n "$_count")
-	if [ -n "$_new" ]; then
-		if [ -n "$_MENU_PICKED" ]; then
-			_MENU_PICKED="${_MENU_PICKED}
+  _count=$1
+  shift
+  if [ $# -gt 0 ]; then
+    _candidates=$(menu_search "$@")
+  else
+    _candidates=$(cook search "" | sed 's/^"//;s/"$//' | sort)
+  fi
+  if [ -n "$_MENU_PICKED" ]; then
+    _tmp=$(mktemp)
+    printf '%s\n' "$_MENU_PICKED" >"$_tmp"
+    _candidates=$(printf '%s\n' "$_candidates" | grep -v -F -f "$_tmp")
+    rm -f "$_tmp"
+  fi
+  _new=$(printf '%s\n' "$_candidates" | awk 'BEGIN{srand()} NF{print rand()"\t"$0}' | sort -n | cut -f2- | head -n "$_count")
+  if [ -n "$_new" ]; then
+    if [ -n "$_MENU_PICKED" ]; then
+      _MENU_PICKED="${_MENU_PICKED}
 ${_new}"
-		else
-			_MENU_PICKED="$_new"
-		fi
-	fi
-	printf '%s\n' "$_new"
+    else
+      _MENU_PICKED="$_new"
+    fi
+  fi
+  if [ "$MENU_VERBOSE" = "true" ]; then
+    printf '%s\n' "$_new"
+  fi
 }
 
 menu_list() {
-	printf '%s\n' "$_MENU_PICKED" | grep -v '^$'
+  printf '%s\n' "$_MENU_PICKED" | grep -v '^$'
 }
 
 menu_shop() {
-	if [ ! -t 0 ]; then
-		_input=$(cat)
-	else
-		_input=$(menu_list)
-	fi
-	_tmp=$(mktemp)
-	printf '%s\n' "$_input" | grep -v '^$' >"$_tmp"
-	while IFS= read -r _line; do
-		set -- "$@" "$_line"
-	done <"$_tmp"
-	rm -f "$_tmp"
-	cook shopping-list "$@"
+  if [ ! -t 0 ]; then
+    _input=$(cat)
+  else
+    _input=$(menu_list)
+  fi
+  _tmp=$(mktemp)
+  printf '%s\n' "$_input" | grep -v '^$' >"$_tmp"
+  while IFS= read -r _line; do
+    set -- "$@" "$_line"
+  done <"$_tmp"
+  rm -f "$_tmp"
+  cook shopping-list "$@"
 }
 
 menu_clear() {
-	_MENU_PICKED=""
+  _MENU_PICKED=""
 }
 
 menu() {
-	_cmd="$1"
-	shift
-	case "$_cmd" in
-	search) menu_search "$@" ;;
-	pick) menu_pick "$@" ;;
-	list) menu_list ;;
-	shop) menu_shop "$@" ;;
-	clear) menu_clear ;;
-	*)
-		echo "usage: menu search|pick|list|shop|clear" >&2
-		return 1
-		;;
-	esac
+  _cmd="$1"
+  shift
+  case "$_cmd" in
+  search) menu_search "$@" ;;
+  pick) menu_pick "$@" ;;
+  list) menu_list ;;
+  shop) menu_shop "$@" ;;
+  clear) menu_clear ;;
+  *)
+    echo "usage: menu search|pick|list|shop|clear" >&2
+    return 1
+    ;;
+  esac
 }
