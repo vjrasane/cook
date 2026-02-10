@@ -1,0 +1,64 @@
+#!/bin/bash
+# Source this file to get the menu function.
+#
+# Usage:
+#   menu search <tag> [tag...]
+#   menu pick <count> <tag> [tag...]
+#   menu result
+#   menu reset
+#
+# Example:
+#   source scripts/menu
+#   menu pick 2 fish "main course"
+#   menu pick 1 vegetarian "main course"
+#   menu pick 4 "main course"
+#   menu result
+
+menu-search() {
+  local result
+  result=$(cook search "$1" | sort)
+  shift
+  for tag in "$@"; do
+    result=$(comm -12 <(echo "$result") <(cook search "$tag" | sort))
+  done
+  echo "$result"
+}
+
+menu-pick() {
+  local count=$1
+  shift
+  local new candidates
+  if [ $# -gt 0 ]; then
+    candidates=$(menu-search "$@")
+  else
+    candidates=$(cook search "" | sort)
+  fi
+  if [ -n "$_MENU_PICKED" ]; then
+    candidates=$(echo "$candidates" | grep -v -F -f <(echo "$_MENU_PICKED"))
+  fi
+  new=$(echo "$candidates" | shuf | head -n "$count")
+  if [ -n "$new" ]; then
+    _MENU_PICKED="${_MENU_PICKED:+$_MENU_PICKED
+}$new"
+  fi
+  echo "$new"
+}
+
+menu-list() {
+  echo "$_MENU_PICKED" | grep -v '^$'
+  _MENU_PICKED=""
+}
+
+menu() {
+  local cmd="$1"
+  shift
+  case "$cmd" in
+  search) menu-search "$@" ;;
+  pick) menu-pick "$@" ;;
+  list) menu-list ;;
+  *)
+    echo "usage: menu search|pick|list" >&2
+    return 1
+    ;;
+  esac
+}

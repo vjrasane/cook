@@ -6,9 +6,6 @@
 {
   dotenv.enable = true;
 
-  env = {
-  };
-
   packages = with pkgs; [
     cook-cli
   ];
@@ -24,5 +21,4 @@
     trim-trailing-whitespace.enable = true;
     end-of-file-fixer.enable = true;
   };
-
 }
