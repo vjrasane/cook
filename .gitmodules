@@ -1,0 +1,3 @@
+[submodule "ha-listonic"]
+	path = ha-listonic
+	url = https://github.com/omelhus/ha-listonic.git

@@ -14,6 +14,8 @@
     cook-cli
   ];
 
+  languages.go.enable = true;
+
   git-hooks.hooks = {
     nixfmt.enable = true;
     check-shebang-scripts-are-executable.enable = true;
