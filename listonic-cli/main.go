@@ -10,14 +10,8 @@ import (
 
 var Version = "dev"
 
-func requireEnv() *Client {
-	email := os.Getenv("LISTONIC_EMAIL")
-	password := os.Getenv("LISTONIC_PASSWORD")
-	if email == "" || password == "" {
-		printError(fmt.Errorf("LISTONIC_EMAIL and LISTONIC_PASSWORD must be set"))
-	}
-
-	client := NewClient(email, password)
+func authenticatedClient() *Client {
+	client := NewClient(os.Getenv("LISTONIC_EMAIL"), os.Getenv("LISTONIC_PASSWORD"))
 	if err := client.Authenticate(); err != nil {
 		printError(err)
 	}
@@ -63,7 +57,7 @@ func listGetCmd() *cobra.Command {
 		Short: "Get shopping lists or a single list",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			if len(args) == 1 {
 				listID, err := client.ResolveListID(args[0])
 				if err != nil {
@@ -91,7 +85,7 @@ func listCreateCmd() *cobra.Command {
 		Short: "Create a new shopping list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			list, err := client.CreateList(args[0])
 			if err != nil {
 				printError(err)
@@ -107,7 +101,7 @@ func listDeleteCmd() *cobra.Command {
 		Short: "Delete a shopping list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(args[0])
 			if err != nil {
 				printError(err)
@@ -127,7 +121,7 @@ func listUpdateCmd() *cobra.Command {
 		Short: "Update a shopping list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(args[0])
 			if err != nil {
 				printError(err)
@@ -150,7 +144,7 @@ func listClearCmd() *cobra.Command {
 		Short: "Remove items from a list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(args[0])
 			if err != nil {
 				printError(err)
@@ -175,7 +169,7 @@ func listItemsCmd() *cobra.Command {
 		Short: "List items in a list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(args[0])
 			if err != nil {
 				printError(err)
@@ -212,7 +206,7 @@ func itemAddCmd() *cobra.Command {
 		Short: "Add an item to a list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(list)
 			if err != nil {
 				printError(err)
@@ -243,7 +237,7 @@ func itemUpdateCmd() *cobra.Command {
 		Short: "Update an item",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(list)
 			if err != nil {
 				printError(err)
@@ -282,7 +276,7 @@ func itemCheckCmd() *cobra.Command {
 		Short: "Check off an item",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(list)
 			if err != nil {
 				printError(err)
@@ -307,7 +301,7 @@ func itemDeleteCmd() *cobra.Command {
 		Short: "Remove an item from a list",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
+			client := authenticatedClient()
 			listID, err := client.ResolveListID(list)
 			if err != nil {
 				printError(err)

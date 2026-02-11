@@ -59,6 +59,10 @@ func (c *Client) Authenticate() error {
 }
 
 func (c *Client) login() error {
+	if c.email == "" || c.password == "" {
+		return fmt.Errorf("LISTONIC_EMAIL and LISTONIC_PASSWORD must be set")
+	}
+
 	params := url.Values{}
 	params.Set("provider", "password")
 	params.Set("autoMerge", "1")
