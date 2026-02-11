@@ -31,36 +31,33 @@ func main() {
 	}
 
 	rootCmd.AddCommand(
-		listsCmd(),
-		itemsCmd(),
-		addCmd(),
-		checkCmd(),
-		uncheckCmd(),
-		deleteItemCmd(),
+		listCmd(),
+		itemCmd(),
 		versionCmd(),
 	)
 
 	rootCmd.Execute()
 }
 
-func listsCmd() *cobra.Command {
+func listCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "lists",
+		Use:   "list",
 		Short: "Manage shopping lists",
 	}
 
 	cmd.AddCommand(
-		listsGetCmd(),
-		listsCreateCmd(),
-		listsDeleteCmd(),
-		listsUpdateCmd(),
-		listsClearCmd(),
+		listGetCmd(),
+		listCreateCmd(),
+		listDeleteCmd(),
+		listUpdateCmd(),
+		listClearCmd(),
+		listItemsCmd(),
 	)
 
 	return cmd
 }
 
-func listsGetCmd() *cobra.Command {
+func listGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get [list]",
 		Short: "Get shopping lists or a single list",
@@ -88,26 +85,23 @@ func listsGetCmd() *cobra.Command {
 	}
 }
 
-func listsCreateCmd() *cobra.Command {
-	var name string
-	cmd := &cobra.Command{
-		Use:   "create",
+func listCreateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "create <name>",
 		Short: "Create a new shopping list",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			client := requireEnv()
-			list, err := client.CreateList(name)
+			list, err := client.CreateList(args[0])
 			if err != nil {
 				printError(err)
 			}
 			printSuccess(list)
 		},
 	}
-	cmd.Flags().StringVar(&name, "name", "", "List name")
-	cmd.MarkFlagRequired("name")
-	return cmd
 }
 
-func listsDeleteCmd() *cobra.Command {
+func listDeleteCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <list>",
 		Short: "Delete a shopping list",
@@ -126,7 +120,7 @@ func listsDeleteCmd() *cobra.Command {
 	}
 }
 
-func listsUpdateCmd() *cobra.Command {
+func listUpdateCmd() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
 		Use:   "update <list>",
@@ -149,7 +143,7 @@ func listsUpdateCmd() *cobra.Command {
 	return cmd
 }
 
-func listsClearCmd() *cobra.Command {
+func listClearCmd() *cobra.Command {
 	var all, checked bool
 	cmd := &cobra.Command{
 		Use:   "clear <list>",
@@ -175,7 +169,7 @@ func listsClearCmd() *cobra.Command {
 	return cmd
 }
 
-func itemsCmd() *cobra.Command {
+func listItemsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "items <list>",
 		Short: "List items in a list",
@@ -195,11 +189,28 @@ func itemsCmd() *cobra.Command {
 	}
 }
 
-func addCmd() *cobra.Command {
-	var list, name, amount, unit string
+func itemCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add",
+		Use:   "item",
+		Short: "Manage shopping list items",
+	}
+
+	cmd.AddCommand(
+		itemAddCmd(),
+		itemUpdateCmd(),
+		itemCheckCmd(),
+		itemDeleteCmd(),
+	)
+
+	return cmd
+}
+
+func itemAddCmd() *cobra.Command {
+	var list, amount, unit string
+	cmd := &cobra.Command{
+		Use:   "add <name>",
 		Short: "Add an item to a list",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			client := requireEnv()
 			listID, err := client.ResolveListID(list)
@@ -207,7 +218,7 @@ func addCmd() *cobra.Command {
 				printError(err)
 			}
 			item, err := client.AddItem(listID, AddItemRequest{
-				Name:   name,
+				Name:   args[0],
 				Amount: amount,
 				Unit:   unit,
 			})
@@ -218,19 +229,58 @@ func addCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&list, "list", "", "List name or ID")
-	cmd.Flags().StringVar(&name, "name", "", "Item name")
 	cmd.Flags().StringVar(&amount, "amount", "", "Quantity")
 	cmd.Flags().StringVar(&unit, "unit", "", "Unit of measurement")
 	cmd.MarkFlagRequired("list")
-	cmd.MarkFlagRequired("name")
 	return cmd
 }
 
-func checkCmd() *cobra.Command {
-	var list, item string
+func itemUpdateCmd() *cobra.Command {
+	var list string
+	var check, uncheck bool
 	cmd := &cobra.Command{
-		Use:   "check",
+		Use:   "update <item>",
+		Short: "Update an item",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			client := requireEnv()
+			listID, err := client.ResolveListID(list)
+			if err != nil {
+				printError(err)
+			}
+			var update UpdateItemRequest
+			if check {
+				v := 1
+				update.Checked = &v
+			} else if uncheck {
+				v := 0
+				update.Checked = &v
+			}
+			if err := client.UpdateItem(listID, args[0], update); err != nil {
+				printError(err)
+			}
+			itemID, _ := strconv.ParseInt(args[0], 10, 64)
+			checked := 0
+			if check {
+				checked = 1
+			}
+			printSuccess(Item{Id: args[0], IdAsNumber: itemID, Checked: checked})
+		},
+	}
+	cmd.Flags().StringVar(&list, "list", "", "List name or ID")
+	cmd.Flags().BoolVar(&check, "check", false, "Mark as checked")
+	cmd.Flags().BoolVar(&uncheck, "uncheck", false, "Mark as unchecked")
+	cmd.MarkFlagRequired("list")
+	cmd.MarkFlagsMutuallyExclusive("check", "uncheck")
+	return cmd
+}
+
+func itemCheckCmd() *cobra.Command {
+	var list string
+	cmd := &cobra.Command{
+		Use:   "check <item>",
 		Short: "Check off an item",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			client := requireEnv()
 			listID, err := client.ResolveListID(list)
@@ -238,67 +288,38 @@ func checkCmd() *cobra.Command {
 				printError(err)
 			}
 			checked := 1
-			if err := client.UpdateItem(listID, item, UpdateItemRequest{Checked: &checked}); err != nil {
+			if err := client.UpdateItem(listID, args[0], UpdateItemRequest{Checked: &checked}); err != nil {
 				printError(err)
 			}
-			itemID, _ := strconv.ParseInt(item, 10, 64)
-			printSuccess(Item{Id: item, IdAsNumber: itemID, Checked: 1})
+			itemID, _ := strconv.ParseInt(args[0], 10, 64)
+			printSuccess(Item{Id: args[0], IdAsNumber: itemID, Checked: 1})
 		},
 	}
 	cmd.Flags().StringVar(&list, "list", "", "List name or ID")
-	cmd.Flags().StringVar(&item, "item", "", "Item ID")
 	cmd.MarkFlagRequired("list")
-	cmd.MarkFlagRequired("item")
 	return cmd
 }
 
-func uncheckCmd() *cobra.Command {
-	var list, item string
+func itemDeleteCmd() *cobra.Command {
+	var list string
 	cmd := &cobra.Command{
-		Use:   "uncheck",
-		Short: "Uncheck an item",
-		Run: func(cmd *cobra.Command, args []string) {
-			client := requireEnv()
-			listID, err := client.ResolveListID(list)
-			if err != nil {
-				printError(err)
-			}
-			unchecked := 0
-			if err := client.UpdateItem(listID, item, UpdateItemRequest{Checked: &unchecked}); err != nil {
-				printError(err)
-			}
-			itemID, _ := strconv.ParseInt(item, 10, 64)
-			printSuccess(Item{Id: item, IdAsNumber: itemID, Checked: 0})
-		},
-	}
-	cmd.Flags().StringVar(&list, "list", "", "List name or ID")
-	cmd.Flags().StringVar(&item, "item", "", "Item ID")
-	cmd.MarkFlagRequired("list")
-	cmd.MarkFlagRequired("item")
-	return cmd
-}
-
-func deleteItemCmd() *cobra.Command {
-	var list, item string
-	cmd := &cobra.Command{
-		Use:   "delete-item",
+		Use:   "delete <item>",
 		Short: "Remove an item from a list",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			client := requireEnv()
 			listID, err := client.ResolveListID(list)
 			if err != nil {
 				printError(err)
 			}
-			if err := client.DeleteItem(listID, item); err != nil {
+			if err := client.DeleteItem(listID, args[0]); err != nil {
 				printError(err)
 			}
-			printSuccess(map[string]string{"deleted": item})
+			printSuccess(map[string]string{"deleted": args[0]})
 		},
 	}
 	cmd.Flags().StringVar(&list, "list", "", "List name or ID")
-	cmd.Flags().StringVar(&item, "item", "", "Item ID")
 	cmd.MarkFlagRequired("list")
-	cmd.MarkFlagRequired("item")
 	return cmd
 }
 
