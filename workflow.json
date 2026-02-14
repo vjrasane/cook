@@ -1,0 +1,1840 @@
+{
+  "name": "Telegram: Generate menu",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "19710073-4d24-4305-a68b-562b8eb0afb1",
+              "name": "chat_id",
+              "value": "434195133",
+              "type": "string"
+            },
+            {
+              "id": "6eb13af1-2ee8-409a-877d-1dde14f322fc",
+              "name": "repo_dir",
+              "value": "/data/work/cook",
+              "type": "string"
+            },
+            {
+              "id": "df977b10-7830-40f9-974d-45eb9127f625",
+              "name": "bin_dir",
+              "value": "/home/node/bin",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "selected",
+        "includeFields": "meals",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4544,
+        -176
+      ],
+      "id": "b07c2822-2601-4c5d-aced-b1732eba6ae5",
+      "name": "Variables"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -4992,
+        -176
+      ],
+      "id": "73d76dc8-57e6-4ce0-9072-585b7d4f5dcd",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "clone",
+        "repositoryPath": "=https://github.com/vjrasane/cook.git",
+        "sourceRepository": "={{ $('Variables').item.json.repo_url }}"
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        -4320,
+        -80
+      ],
+      "id": "dc75bf72-c7c8-4879-8d6e-f6d497c63bb5",
+      "name": "Clone cook repo",
+      "executeOnce": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "pull",
+        "repositoryPath": "={{ $('Variables').item.json.repo_dir }}"
+      },
+      "type": "n8n-nodes-base.git",
+      "typeVersion": 1.1,
+      "position": [
+        -4096,
+        -80
+      ],
+      "id": "12b0de40-bf5a-41c5-a137-c523feeef810",
+      "name": "Pull cook repo"
+    },
+    {
+      "parameters": {
+        "command": "=PATH=\"$PATH:{{ $('Variables').item.json.bin_dir }}\"\n\ncd '{{ $('Variables').item.json.repo_dir }}'\nsource scripts/menu\nmenu pick 2 fish \"main course\"\nmenu pick 1 vegetarian \"main course\"\nmenu pick {{ $('Variables').item.json.meals }} \"main course\"\nmenu list | head -n {{ $('Variables').item.json.meals }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -3648,
+        -272
+      ],
+      "id": "cbf349fe-d7b2-4fb1-a3c4-f5ca9217a4d1",
+      "name": "List recipes"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3872,
+        -288
+      ],
+      "id": "af136728-4de8-40bf-8346-daca3880b389",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const path = require(\"path\")\n\nconst recipes = $input.first().json.stdout.split('\\n').filter(r => r.trim());\n\nreturn ({\n  json: { \n    recipes: recipes.map((r) => ({\n      path: r,\n      ...path.parse(r),\n    })) \n  }\n})"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3424,
+        -272
+      ],
+      "id": "1d7fe31d-30c5-4fae-b898-8efcc292c6ba",
+      "name": "Parse filepath"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Variables').item.json.chat_id }}",
+        "message": "={{ $json.recipes }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "❌ Reject"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2752,
+        -416
+      ],
+      "id": "360fdbed-dc25-46e5-beab-647f9ee46f9a",
+      "name": "Approve",
+      "webhookId": "a52da7b7-ad18-4186-8b03-40257f5ba051",
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b17696c1-bb5d-4fc8-ab55-597152a2928e",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2304,
+        -416
+      ],
+      "id": "1893f482-0e95-4cb7-abbb-56cea7a4669e",
+      "name": "Is Approved"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { recipes } = $input.first().json\n\nreturn {\n  json: {\n    recipes: recipes.map((r) => r.name).join(\"\\n\"),\n    input: true,\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2976,
+        -416
+      ],
+      "id": "c62e6dfc-6797-45fa-82ca-6b2dd4d92437",
+      "name": " Join message"
+    },
+    {
+      "parameters": {
+        "command": "=PATH=\"$PATH:{{ $('Variables').item.json.bin_dir }}\"\n\ncd '{{ $('Variables').item.json.repo_dir }}'\nsource scripts/menu\necho '{{ $json.stdout }}' | menu shop -p -f json\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        -344
+      ],
+      "id": "e2f68e47-c120-4a21-9c75-0ba284dd505e",
+      "name": "Create shopping list"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 11 * * 7"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4992,
+        -368
+      ],
+      "id": "0589c963-a777-43ca-ba6e-f95b51d3d0ce",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "command": "=bin_dir='{{ $('Variables').item.json.bin_dir }}'\nmkdir -p \"$bin_dir\"\n\ndir=\"$(mktemp -d)\"\ncd \"$dir\"\n\nwget 'https://github.com/cooklang/cookcli/releases/download/v0.21.0/cook-x86_64-unknown-linux-musl.tar.gz'\ntar xvf cook*\nmv -f cook \"$bin_dir/cook\"\n\ncd \"$bin_dir\"\nchmod +x *\nrm -r \"$dir\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -4096,
+        -272
+      ],
+      "id": "4e6289dd-98a5-4b17-a0a9-5a0022deeac3",
+      "name": "Install binaries"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "E967fmS63Sopyg9P",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/E967fmS63Sopyg9P",
+          "cachedResultName": "Listonic: Get Lists"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "access_token": "={{ $json.access_token }}"
+          },
+          "matchingColumns": [
+            "access_token"
+          ],
+          "schema": [
+            {
+              "id": "access_token",
+              "displayName": "access_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -4096,
+        -464
+      ],
+      "id": "44d541e2-342b-4c2e-8df9-7775c5f05cfb",
+      "name": "Fetch shopping lists"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1d90395b-52df-4c17-b451-6a9c6f71016d",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "array",
+                "operation": "lengthGt",
+                "rightType": "number"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -512,
+        -152
+      ],
+      "id": "24463194-f042-49e9-98d9-07c9b0f401c0",
+      "name": "More Than One",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Fetch shopping lists').all()\n\nconst options = items.map(l => ({\n        \"option\": l.json.Name\n      }))\n\nreturn {\n  json: {\n    \"input\": true,\n        \"values\": [\n          ...options,\n          {\n            option: \"Create new list\"\n          }\n        ]\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        -824
+      ],
+      "id": "4e8ff013-8d61-4c31-b554-061e23d7f4f0",
+      "name": "to Options"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "778qMdsWZmv7AGQj",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/778qMdsWZmv7AGQj",
+          "cachedResultName": "Listonic: Add Item"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "access_token": "={{ $('Listonic Login1').item.json.access_token }}",
+            "list_id": "={{ $('Merge3').item.json.list.Id }}",
+            "name": "={{ $('Merge3').item.json.item.name }}",
+            "amount": "={{ String($('Merge3').item.json.item.amount) }}",
+            "unit": "={{ $('Merge3').item.json.item.unit }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "access_token",
+              "displayName": "access_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "list_id",
+              "displayName": "list_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "unit",
+              "displayName": "unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        -584
+      ],
+      "id": "befde9e5-52a7-4217-8e40-835295793a36",
+      "name": "Add to shopping list"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -64,
+        -608
+      ],
+      "id": "f7278a3a-c241-4076-9096-f6c34c0d06f6",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const name = $input.first().json.data['Shopping list'];\nconst lists = $('Shopping Lists to JSON').first().json.data\n\nreturn [{ json: { list: lists.find(l => l.Name === name) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -536
+      ],
+      "id": "4b0a3c32-9761-404c-a7ee-36e51cb5520d",
+      "name": "Find by name"
+    },
+    {
+      "parameters": {
+        "jsCode": "const [list] = $input.first().json.data\n\nreturn [{ json: { list } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -152
+      ],
+      "id": "3e5a8996-813d-4f92-b820-541caaaf1405",
+      "name": "Take first",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = JSON.parse($input.first().json.stdout);\n\nconst items = data.reduce((acc, item) => {\n  if (!item.quantity.length) return [...acc, \n                                     {\n                                       name: item.name,\n                                       amount: \"\",\n                                       unit: \"\",\n                                     }]\n  return [...acc, \n          ...item.quantity.map(q => ({\n            name: item.name,\n            amount: q.value.value.value,\n            unit: q.unit,\n          }))\n         ]\n}, [])\n\nreturn items.map(item => ({ json: { item } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -344
+      ],
+      "id": "e35a5ae7-5840-4c02-901a-5fe7869fb4b7",
+      "name": "Items to Json"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Variables').item.json.chat_id }}",
+        "message": "Add to which shopping list?",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n  {\n    \"fieldLabel\": \"Shopping list\",\n    \"fieldType\": \"dropdown\",\n    \"fieldOptions\": {\n      \"values\": {{ $json.values }}\n    },\n    \"requiredField\": true\n  }\n]\n",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1856,
+        -824
+      ],
+      "id": "a016d53a-8e12-47da-9eb6-8428d554ce7d",
+      "name": "Select shopping list",
+      "webhookId": "7fe48289-5bfa-401b-a351-4615cff83e43",
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Variables').item.json.chat_id }}",
+        "text": "=Added {{ $('Items to Json').all().length }} items to {{ $('Merge3').item.json.list.Name }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        -776
+      ],
+      "id": "6c443c14-868e-4964-b2cb-3f009785ff23",
+      "name": "Confirm",
+      "webhookId": "4830534c-119f-4ff8-b962-47248cf8e173",
+      "executeOnce": true,
+      "notesInFlow": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "dRUNDAV9nUbpfjxC",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/dRUNDAV9nUbpfjxC",
+          "cachedResultName": "Listonic: Create List"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "access_token": "={{ $('Listonic Login').item.json.access_token }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "access_token",
+              "displayName": "access_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -512,
+        -728
+      ],
+      "id": "dba5d1f5-bf0a-4eb3-a11e-ec680ddcaa66",
+      "name": "Create new list"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { list: $input.first().json } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -728
+      ],
+      "id": "2663c6f6-f284-4503-a9c9-62d2e943b153",
+      "name": "New list to JSON"
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        384,
+        -608
+      ],
+      "id": "3e1e3c33-0aa9-4aea-8cb4-0595820f3627",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        -512
+      ],
+      "id": "d6369b76-90dd-4c9f-9c14-97f57f7f72da",
+      "name": "Wait",
+      "webhookId": "8dae5a7a-f935-480c-bec7-14f7a26496fa"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "434195133"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -5440,
+        -560
+      ],
+      "id": "a7c919af-a553-48bd-a473-5625d539100d",
+      "name": "Telegram Trigger",
+      "webhookId": "4042b4f3-aa4a-4363-9252-beb031ecbbe6",
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c4e92716-def4-46e2-82bd-052701422a89",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/^\\/menu(?:\\s+(\\d+))?$/",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -5216,
+        -560
+      ],
+      "id": "43f954ed-d1a2-43d9-8875-021291f11121",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Variables').item.json.chat_id }}",
+        "message": "=Revise ",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n  {\n    \"fieldLabel\": \"Replace\",\n    \"fieldType\": \"checkbox\",\n    \"fieldOptions\": {\n      \"values\": {{ $json.options }}\n    }\n  },\n  {\n    \"fieldLabel\": \"Search recipes\",\n    \"placeholder\": \"enter search\"\n  }\n]\n",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 30,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1856,
+        -200
+      ],
+      "id": "d4a1e71d-2789-4bb5-9772-594d96268843",
+      "name": "Revise",
+      "webhookId": "91a6976b-1d33-451a-91cb-360ee0c9cb93",
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const recipes = $('Parse filepath').first().json.recipes\n\nconst options = recipes.map(r => ({\n  option: r.name\n}))\n\nreturn {\n  json: {\n    options,\n    input: true,\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        -200
+      ],
+      "id": "f46b88bb-69bb-4303-9d4d-0ec2b6163d61",
+      "name": "to Form"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0dafc9b-d9b7-43b9-8f8f-331445b53023",
+              "name": "meals",
+              "value": 7,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4768,
+        -176
+      ],
+      "id": "939fb3fa-41fc-47e7-aaa6-97f9f29c0682",
+      "name": "Set Meals"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.message.text\n\nconst [, arg] = msg.split(' ')\nconst num = parseInt(arg) || 7\n\nreturn {\n  json: { meals: num }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4992,
+        -560
+      ],
+      "id": "09b33e33-46ce-4553-a478-a81691380e6d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5d15bfdf-183a-4c47-b395-438e561d3fbd",
+              "leftValue": "={{ $json.meals }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "3a0c8c24-0f3c-426e-ba05-1b58ca642640",
+              "leftValue": "={{ $json.meals }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4768,
+        -560
+      ],
+      "id": "5606c792-8084-4754-9791-42954dc44057",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6d17347c-19df-4e32-acb1-b301a52a0f33",
+              "leftValue": "={{ $json.input }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2528,
+        -416
+      ],
+      "id": "73b51ad8-4942-4223-aca4-396d49d0dc02",
+      "name": "Timeout"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Variables').item.json.chat_id }}",
+        "message": "Please type name for new list",
+        "responseType": "freeText",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 30,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -960,
+        -776
+      ],
+      "id": "9e8244c3-7868-4b01-a6e9-2c611d7f3c4f",
+      "name": "Ask for new list name",
+      "webhookId": "6eb54cd9-35c1-454c-be22-7310d1abf942",
+      "credentials": {
+        "telegramApi": {
+          "id": "BVRevGQosZzfL7S1",
+          "name": "Menu Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6d17347c-19df-4e32-acb1-b301a52a0f33",
+              "leftValue": "={{ $json.input }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1632,
+        -200
+      ],
+      "id": "b3ec1554-3dec-4a8b-b452-7afd7b8529b9",
+      "name": "Timeout2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6d17347c-19df-4e32-acb1-b301a52a0f33",
+              "leftValue": "={{ $json.input }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1632,
+        -824
+      ],
+      "id": "a5c3d3f0-acec-473a-8033-31d8c864e240",
+      "name": "Timeout1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d40c9607-f81e-44a9-8755-4b28415fe82a",
+              "leftValue": "={{ $json.data['Shopping list'] }}",
+              "rightValue": "Create new list",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1408,
+        -752
+      ],
+      "id": "eb82ff08-c11b-40fe-9e5a-156282a9b16e",
+      "name": "Is New"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6d17347c-19df-4e32-acb1-b301a52a0f33",
+              "leftValue": "={{ $json.input }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -736,
+        -776
+      ],
+      "id": "6106dad1-cc7d-4e4c-9cc9-35dd5090e2d7",
+      "name": "Timeout3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39ba58d6-d59f-4bf0-bdf7-e08542713452",
+              "name": "input",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1184,
+        -776
+      ],
+      "id": "1baecb3f-4243-424e-a91e-aae0a37c06b8",
+      "name": "Set Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const recipes = $('Parse filepath').first().json.recipes\nconst removals = $('Revise').first().json.data.Replace\nconst picks = $input.first().json.recipes\n\nconst filtered = recipes.filter(rec => !removals.some(rem => rem === rec.name))\n\nreturn ({\n  json: { \n    recipes: [\n      ...filtered,\n      ...picks\n    ]\n  }\n})"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        -128
+      ],
+      "id": "fd8516ec-5670-4ae4-a30b-27283e04f3ab",
+      "name": "Remove"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -3200,
+        -272
+      ],
+      "id": "943643b4-6fdd-428d-bd7d-956ca4016479",
+      "name": "Iterator"
+    },
+    {
+      "parameters": {
+        "command": "=PATH=\"$PATH:{{ $('Variables').item.json.bin_dir }}\"\n\ncd '{{ $('Variables').item.json.repo_dir }}'\nsource scripts/menu\n\nmenu pick {{ $('Revise').item.json.data.Replace.length }} fish \"main course {{ $('Revise').item.json.data['Search recipes'] }}\"\nmenu pick {{ $('Revise').item.json.data.Replace.length }} \"main course\"\nmenu list | head -n {{ $('Revise').item.json.data.Replace.length }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        -200
+      ],
+      "id": "7405670e-ebe2-4532-b217-c22c8750a503",
+      "name": "Pick recipes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const path = require(\"path\")\n\nconst recipes = $input.first().json.stdout.split('\\n').filter(r => r.trim());\n\nreturn ({\n  json: { \n    recipes: recipes.map((r) => ({\n      path: r,\n      ...path.parse(r),\n    })) \n  }\n})"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        -200
+      ],
+      "id": "24017ec9-94ff-445c-9adc-703f9ba14291",
+      "name": "Parse filepath2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lists = $('Shopping Lists to JSON').first().json.data\n\nlists.sort((a,b) => +a.Id - +b.Id)\n\nreturn {\n  json: {\n    list: lists[0]\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        -944
+      ],
+      "id": "3a13e513-ebfb-43f5-a142-fb935b406c30",
+      "name": "Get First"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RsQYreImR7O8Aatx",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RsQYreImR7O8Aatx",
+          "cachedResultName": "Listonic: Login"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -4320,
+        -464
+      ],
+      "id": "28a03d2a-ac2e-4d12-9c9c-31c53b8ec222",
+      "name": "Listonic Login"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RsQYreImR7O8Aatx",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RsQYreImR7O8Aatx",
+          "cachedResultName": "Listonic: Login"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        -608
+      ],
+      "id": "182b6778-2e7f-4453-90af-ed0fe3360493",
+      "name": "Listonic Login1"
+    }
+  ],
+  "pinData": {
+    "Create shopping list": [
+      {
+        "json": {
+          "exitCode": 0,
+          "stderr": "",
+          "stdout": "[{\"name\":\"San Marzano tomato sauce\",\"quantity\":[{\"unit\":\"tbsp\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":5.0}}}]},{\"name\":\"basil leaves\",\"quantity\":[]},{\"name\":\"bataatti\",\"quantity\":[{\"unit\":\"kpl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":2.0}}}]},{\"name\":\"currypasta, keltainen\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"currytahna\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":2.0}}}]},{\"name\":\"flour\",\"quantity\":[]},{\"name\":\"fresh yeast\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.6}}}]},{\"name\":\"jasmiiniriisi\",\"quantity\":[]},{\"name\":\"jauheliha\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":400.0}}}]},{\"name\":\"kalakastike\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"kalaliemi\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":100.0}}}]},{\"name\":\"kananmuna\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":5.0}}}]},{\"name\":\"kaprikset\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"kasvisliemi\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":100.0}}}]},{\"name\":\"kerma\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":200.0}}}]},{\"name\":\"ketsuppi\",\"quantity\":[]},{\"name\":\"kikherneet, valutetut\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":400.0}}}]},{\"name\":\"kookosmaitoa\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":800.0}}}]},{\"name\":\"kookosöljy\",\"quantity\":[]},{\"name\":\"korianteri, tuore\",\"quantity\":[]},{\"name\":\"limetti\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":3.0}}}]},{\"name\":\"lohifilee\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":200.0}}}]},{\"name\":\"maito\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":600.0}}}]},{\"name\":\"makaroni\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":300.0}}}]},{\"name\":\"mozzarella cheese\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":100.0}}}]},{\"name\":\"mustapippuri\",\"quantity\":[]},{\"name\":\"nyhtökaura\",\"quantity\":[{\"unit\":\"pkt\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"oil\",\"quantity\":[]},{\"name\":\"oliivit\",\"quantity\":[]},{\"name\":\"oliiviöljy\",\"quantity\":[]},{\"name\":\"penne\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":250.0}}}]},{\"name\":\"pinaatti\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":100.0}}}]},{\"name\":\"pinaatti, sulatettu\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":150.0}}}]},{\"name\":\"pizzapohja\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"punasipuli, viipaloitu\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":0.5}}}]},{\"name\":\"puolukkahillo\",\"quantity\":[]},{\"name\":\"raejuusto\",\"quantity\":[]},{\"name\":\"riisi\",\"quantity\":[]},{\"name\":\"salt\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":24.6}}}]},{\"name\":\"savupaprika\",\"quantity\":[{\"unit\":\"tl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"semolina\",\"quantity\":[]},{\"name\":\"sipuli\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":3.0}}}]},{\"name\":\"sitruuna\",\"quantity\":[{\"unit\":null,\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":0.5}}}]},{\"name\":\"suola\",\"quantity\":[{\"unit\":\"tl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.5}}}]},{\"name\":\"tilli, tuore\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":1.0}}}]},{\"name\":\"tipo zero flour\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":840.0}}}]},{\"name\":\"tomaattikastike\",\"quantity\":[{\"unit\":\"rkl\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":3.0}}}]},{\"name\":\"uuni\",\"quantity\":[{\"unit\":\"°C\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":425.0}}}]},{\"name\":\"valkoinen kalafile\",\"quantity\":[{\"unit\":\"g\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":300.0}}}]},{\"name\":\"valkosipuli\",\"quantity\":[{\"unit\":\"kynsi\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":4.0}}}]},{\"name\":\"vegaanijuusto, raastettu\",\"quantity\":[]},{\"name\":\"vehnäjauho\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":150.00000000000003}}}]},{\"name\":\"voi\",\"quantity\":[]},{\"name\":\"water\",\"quantity\":[{\"unit\":\"ml\",\"value\":{\"type\":\"number\",\"value\":{\"type\":\"regular\",\"value\":533.0}}}]}]"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Find by name": [
+      {
+        "json": {
+          "list": {
+            "Id": "200215712",
+            "Name": "test",
+            "Active": 1,
+            "Deleted": 0,
+            "Items": null
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 927067733,
+          "message": {
+            "message_id": 173,
+            "from": {
+              "id": 434195133,
+              "is_bot": false,
+              "first_name": "Ville",
+              "last_name": "Räsänen",
+              "username": "heppumon",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 434195133,
+              "first_name": "Ville",
+              "last_name": "Räsänen",
+              "username": "heppumon",
+              "type": "private"
+            },
+            "date": 1770835830,
+            "text": "/menu 14",
+            "entities": [
+              {
+                "offset": 0,
+                "length": 5,
+                "type": "bot_command"
+              }
+            ]
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Approve": [
+      {
+        "json": {
+          "data": {
+            "approved": true
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Select shopping list": [
+      {
+        "json": {
+          "data": {
+            "Shopping list": "testing list"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Variables": {
+      "main": [
+        [
+          {
+            "node": "Install binaries",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Clone cook repo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Listonic Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set Meals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clone cook repo": {
+      "main": [
+        [
+          {
+            "node": "Pull cook repo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pull cook repo": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "List recipes": {
+      "main": [
+        [
+          {
+            "node": "Parse filepath",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "List recipes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse filepath": {
+      "main": [
+        [
+          {
+            "node": "Iterator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve": {
+      "main": [
+        [
+          {
+            "node": "Timeout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Approved": {
+      "main": [
+        [
+          {
+            "node": "Create shopping list",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "to Options",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "to Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Join message": {
+      "main": [
+        [
+          {
+            "node": "Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create shopping list": {
+      "main": [
+        [
+          {
+            "node": "Items to Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Meals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Install binaries": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listonic Login": {
+      "main": [
+        [
+          {
+            "node": "Fetch shopping lists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch shopping lists": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "More Than One": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Take first",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "to Options": {
+      "main": [
+        [
+          {
+            "node": "Select shopping list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Listonic Login1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find by name": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take first": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Items to Json": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Select shopping list": {
+      "main": [
+        [
+          {
+            "node": "Timeout1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to shopping list": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create new list": {
+      "main": [
+        [
+          {
+            "node": "New list to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New list to JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to shopping list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "to Form": {
+      "main": [
+        [
+          {
+            "node": "Revise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Meals": {
+      "main": [
+        [
+          {
+            "node": "Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revise": {
+      "main": [
+        [
+          {
+            "node": "Timeout2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeout": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Is Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for new list name": {
+      "main": [
+        [
+          {
+            "node": "Timeout3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeout1": {
+      "main": [
+        [
+          {
+            "node": "Get First",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New": {
+      "main": [
+        [
+          {
+            "node": "Set Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find by name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeout3": {
+      "main": [
+        [
+          {
+            "node": "Get First",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create new list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Input": {
+      "main": [
+        [
+          {
+            "node": "Ask for new list name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeout2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Pick recipes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove": {
+      "main": [
+        [
+          {
+            "node": "Iterator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterator": {
+      "main": [
+        [
+          {
+            "node": " Join message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick recipes": {
+      "main": [
+        [
+          {
+            "node": "Parse filepath2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse filepath2": {
+      "main": [
+        [
+          {
+            "node": "Remove",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get First": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listonic Login1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8c0dac7d-0d6f-4c86-99c4-d11a60aaae87",
+  "meta": {
+    "instanceId": "ae76db55d806a40c858d8a3126ea43769a8beae8d667678d7c897b4840a7bf12"
+  },
+  "id": "vF23H1j5oMXRJebr",
+  "tags": [
+    {
+      "name": "telegram",
+      "id": "hmPJ3VPQhQfmuYh8",
+      "updatedAt": "2026-02-12T08:03:08.055Z",
+      "createdAt": "2026-02-12T08:03:08.055Z"
+    }
+  ]
+}

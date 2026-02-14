@@ -1,0 +1,36 @@
+{
+  "name": "n8n-nodes-cooklang",
+  "version": "0.1.0",
+  "description": "n8n nodes for parsing Cooklang recipes",
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && for f in src/nodes/*/cooklang.svg; do cp \"$f\" \"dist/nodes/$(basename $(dirname \"$f\"))/\"; done",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "nodes": [
+      "dist/nodes/CooklangParse/CooklangParse.node.js",
+      "dist/nodes/CooklangShoppingList/CooklangShoppingList.node.js"
+    ]
+  },
+  "dependencies": {
+    "@cooklang/cooklang-ts": "^1.0.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^3.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
